@@ -1,0 +1,23 @@
+[
+  {
+    "id": 1,
+    "name": "The Witcher 3",
+    "price": 899,
+    "genre": "RPG",
+    "year": 2015
+  },
+  {
+    "id": 2,
+    "name": "Minecraft",
+    "price": 599,
+    "genre": "Sandbox",
+    "year": 2011
+  },
+  {
+    "name": "FIFA 22",
+    "genre": "Sport",
+    "price": 1299,
+    "year": 2022,
+    "id": 3
+  }
+]

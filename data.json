@@ -19,5 +19,12 @@
     "price": 1299,
     "year": 2022,
     "id": 3
+  },
+  {
+    "name": "Zaklínač ",
+    "genre": "RPG",
+    "price": 250,
+    "year": 2002,
+    "id": 1771878967116
   }
 ]

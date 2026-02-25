@@ -26,7 +26,11 @@ const write = (data) => {
 // --- ŠABLONA HTML ---
 const getTemplate = (games) => {
     const cards = games.map(g => `
-        <div class="game-card" data-name="${g.name.toLowerCase()}" data-genre="${g.genre.toLowerCase()}">
+        <div class="game-card" 
+             data-name="${g.name.toLowerCase()}" 
+             data-genre="${g.genre.toLowerCase()}" 
+             data-year="${g.year}" 
+             data-price="${g.price}">
             <div class="card-controls">
                 <button class="edit-btn" onclick='openModal(${JSON.stringify(g)})'>⚙</button>
                 <button class="delete-btn" onclick="del(${g.id})">✖</button>
@@ -48,8 +52,9 @@ const getTemplate = (games) => {
         <title>Knihovna her</title>
         <style>
             body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 40px; display: flex; flex-direction: column; align-items: center; color: #333; }
-            .controls-bar { background: white; padding: 20px; border-radius: 15px; margin-bottom: 30px; display: flex; gap: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+            .controls-bar { background: white; padding: 20px; border-radius: 15px; margin-bottom: 30px; display: flex; flex-wrap: wrap; gap: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); align-items: center; justify-content: center; }
             input, select { padding: 10px; border-radius: 8px; border: 1px solid #ddd; outline: none; }
+            .filter-group { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: #666; }
             .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 25px; max-width: 900px; }
             .game-card { background: #fff; border-radius: 20px; padding: 20px; display: flex; align-items: center; position: relative; width: 400px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); transition: transform 0.2s; }
             .game-card:hover { transform: translateY(-5px); }
@@ -68,15 +73,31 @@ const getTemplate = (games) => {
     <body>
         <h1>Herní Knihovna</h1>
         <div class="controls-bar">
-            <input type="text" id="filter-name" placeholder="Hledat podle názvu..." oninput="applyFilters()">
-            <select id="filter-genre" onchange="applyFilters()">
-                <option value="">Všechny žánry</option>
-                <option value="rpg">RPG</option>
-                <option value="akce">Akce</option>
-                <option value="strategie">Strategie</option>
-                <option value="sportovní">Sportovní</option>
-            </select>
+            <div class="filter-group">
+                <label>Název</label>
+                <input type="text" id="filter-name" placeholder="Zadejte název hry" oninput="applyFilters()">
+            </div>
+            <div class="filter-group">
+                <label>Žánr</label>
+                <select id="filter-genre" onchange="applyFilters()">
+                    <option value="">Všechny žánry</option>
+                    <option value="rpg">RPG</option>
+                    <option value="akce">Akce</option>
+                    <option value="strategie">Strategie</option>
+                    <option value="sport">Sport</option>
+                    <option value="sandbox">Sandbox</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Rok vydání</label>
+                <input type="number" id="filter-year" placeholder="Zadejte rok vydání" oninput="applyFilters()">
+            </div>
+            <div class="filter-group">
+                <label>Max. cena: <span id="price-val">5000</span> Kč</label>
+                <input type="range" id="filter-price" min="0" max="5000" step="100" value="5000" oninput="applyFilters()">
+            </div>
         </div>
+
         <div class="grid" id="game-grid">
             ${cards}
             <div class="game-card add" onclick="openModal()">
@@ -84,6 +105,7 @@ const getTemplate = (games) => {
                 <p style="color: #666; font-weight: bold;">Přidat novou hru</p>
             </div>
         </div>
+
         <div id="modal">
             <div class="modal-content">
                 <h3 id="m-title" style="margin-top:0">Nová hra</h3>
@@ -96,17 +118,28 @@ const getTemplate = (games) => {
                 <button onclick="closeModal()" style="border:none; background:none; cursor:pointer; color:#999;">Zrušit</button>
             </div>
         </div>
+
         <script>
             function applyFilters() {
                 const nameVal = document.getElementById('filter-name').value.toLowerCase();
                 const genreVal = document.getElementById('filter-genre').value.toLowerCase();
+                const yearVal = document.getElementById('filter-year').value;
+                const priceVal = document.getElementById('filter-price').value;
+                
+                document.getElementById('price-val').innerText = priceVal;
+
                 const cards = document.querySelectorAll('.game-card:not(.add)');
+                
                 cards.forEach(card => {
                     const matchesName = card.dataset.name.includes(nameVal);
                     const matchesGenre = genreVal === "" || card.dataset.genre === genreVal;
-                    card.style.display = (matchesName && matchesGenre) ? "flex" : "none";
+                    const matchesYear = yearVal === "" || card.dataset.year === yearVal;
+                    const matchesPrice = Number(card.dataset.price) <= Number(priceVal);
+
+                    card.style.display = (matchesName && matchesGenre && matchesYear && matchesPrice) ? "flex" : "none";
                 });
             }
+
             function openModal(g = {}) {
                 document.getElementById('m-title').innerText = g.id ? 'Upravit hru' : 'Nová hra';
                 document.getElementById('g-id').value = g.id || '';
@@ -116,7 +149,9 @@ const getTemplate = (games) => {
                 document.getElementById('year').value = g.year || '';
                 document.getElementById('modal').style.display = 'flex';
             }
+
             function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
             async function save() {
                 const id = document.getElementById('g-id').value;
                 const body = {
@@ -131,6 +166,7 @@ const getTemplate = (games) => {
                 await fetch(url, { method, body: JSON.stringify(body) });
                 location.reload();
             }
+
             async function del(id) {
                 if(confirm('Opravdu chcete tuto hru odstranit?')) {
                     await fetch('/items/' + id, { method: 'DELETE' });
@@ -146,13 +182,11 @@ const getTemplate = (games) => {
 const server = http.createServer((req, res) => {
     let games = read();
 
-    // Hlavní stránka
-    if (req.url === "/" || req.url === "/items" && req.method === "GET") {
+    if (req.url === "/" || (req.url === "/items" && req.method === "GET")) {
         res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
         return res.end(getTemplate(games));
     }
 
-    // API Logika
     if (req.url.startsWith("/items")) {
         let body = "";
         req.on("data", chunk => body += chunk);
@@ -172,9 +206,7 @@ const server = http.createServer((req, res) => {
                 games = games.filter(g => g.id != id);
             }
 
-            // Uložení změn do JSON souboru
             write(games);
-            
             res.writeHead(200);
             res.end();
         });

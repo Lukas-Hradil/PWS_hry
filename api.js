@@ -23,7 +23,49 @@ const write = (data) => {
     }
 };
 
-// --- ŠABLONA HTML ---
+// --- ZJEDNODUŠENÁ VALIDACE NA STRANĚ SERVERU ---
+const validateData = (data) => {
+    // Kontroluje, jestli nejsou texty prázdné a jestli jsou čísla >= 0
+    if (!data.name || data.name.trim() === "") return false;
+    if (!data.genre || data.genre.trim() === "") return false;
+    if (typeof data.price !== "number" || data.price < 0) return false;
+    if (typeof data.year !== "number" || data.year < 0) return false;
+    return true;
+};
+
+// --- ŠABLONA PRO DETAIL ZÁZNAMU ---
+const getDetailTemplate = (g) => `
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <title>Hra: ${g.name}</title>
+    <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/686/686589.png" type="image/png">
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .detail-box { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); max-width: 600px; width: 90%; text-align: center; }
+        img { width: 100%; border-radius: 15px; border: 2px solid #000; margin-bottom: 20px; }
+        .info { text-align: left; background: #f8f9fa; padding: 20px; border-radius: 12px; border: 1px solid #eee; }
+        .back-btn { display: inline-block; margin-top: 20px; padding: 10px 20px; background: #3498db; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="detail-box">
+        <img src="${g.image || ''}" onerror="this.src='https://via.placeholder.com/600x280?text=Logo'">
+        <h1>${g.name}</h1>
+        <div class="info">
+            <p><strong>ID:</strong> ${g.id}</p>
+            <p><strong>Žánr:</strong> ${g.genre}</p>
+            <p><strong>Cena:</strong> ${g.price} Kč</p>
+            <p><strong>Rok vydání:</strong> ${g.year}</p>
+        </div>
+        <a href="/" class="back-btn">← Zpět do knihovny</a>
+    </div>
+</body>
+</html>`;
+
+
+// --- HLAVNÍ ŠABLONA ---
 const getTemplate = (games) => {
     const cards = games.map(g => `
         <div class="game-card" 
@@ -35,7 +77,17 @@ const getTemplate = (games) => {
                 <button class="edit-btn" onclick='openModal(${JSON.stringify(g)})'>⚙</button>
                 <button class="delete-btn" onclick="del(${g.id})">✖</button>
             </div>
-            <div class="game-image-placeholder"></div>
+            
+            <a href="/item?id=${g.id}" style="text-decoration: none;">
+                <img class="game-image" 
+                      src="${g.image || ''}" 
+                      alt="${g.name}" 
+                      onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="game-image-placeholder" style="display: ${g.image ? 'none' : 'flex'};">
+                    <span>Logo</span>
+                </div>
+            </a>
+            
             <div class="game-info">
                 <div class="info-line"><strong>Jméno:</strong> ${g.name}</div>
                 <div class="info-line"><strong>Žánr:</strong> ${g.genre}</div>
@@ -50,19 +102,28 @@ const getTemplate = (games) => {
     <head>
         <meta charset="UTF-8">
         <title>Knihovna her</title>
+        <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/686/686589.png" type="image/png">
         <style>
-            body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 40px; display: flex; flex-direction: column; align-items: center; color: #333; }
+            body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 40px; display: flex; flex-direction: column; align-items: center; color: #333; overflow-y: scroll; }
             .controls-bar { background: white; padding: 20px; border-radius: 15px; margin-bottom: 30px; display: flex; flex-wrap: wrap; gap: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); align-items: center; justify-content: center; }
             input, select { padding: 10px; border-radius: 8px; border: 1px solid #ddd; outline: none; }
-            .filter-group { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: #666; }
-            .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 25px; max-width: 900px; }
-            .game-card { background: #fff; border-radius: 20px; padding: 20px; display: flex; align-items: center; position: relative; width: 400px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); transition: transform 0.2s; }
+            .filter-group { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: #666; width: 200px; }
+            
+            #filter-price { -webkit-appearance: none; width: 100%; height: 8px; background: #333; border-radius: 5px; outline: none; margin: 10px 0; padding: 0; }
+            #filter-price::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; background: #00bcd4; border-radius: 50%; cursor: pointer; border: none; }
+            #filter-price::-moz-range-thumb { width: 18px; height: 18px; background: #00bcd4; border-radius: 50%; cursor: pointer; border: none; }
+
+            .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 25px; max-width: 1200px; }
+            .game-card { background: #fff; border-radius: 20px; padding: 20px; display: flex; align-items: center; position: relative; width: 560px; min-height: 220px; box-sizing: border-box; box-shadow: 0 10px 20px rgba(0,0,0,0.05); transition: transform 0.2s; overflow: hidden; }
             .game-card:hover { transform: translateY(-5px); }
-            .add { border: 3px dashed #bbb; cursor: pointer; justify-content: center; flex-direction: column; background: #fafafa; min-height: 150px; }
-            .game-image-placeholder { width: 100px; height: 100px; background: #34495e; border-radius: 15px; margin-right: 20px; flex-shrink: 0; }
-            .game-info { flex-grow: 1; }
-            .info-line { background: #f8f9fa; margin: 4px 0; padding: 8px 12px; border-radius: 8px; font-size: 14px; border: 1px solid #eee; }
-            .card-controls { position: absolute; top: 15px; right: 15px; display: flex; gap: 8px; }
+            .add { border: 3px dashed #bbb; cursor: pointer; justify-content: center; flex-direction: column; background: #fafafa; text-align: center; }
+            
+            .game-image { width: 260px; height: 121px; border-radius: 12px; margin-right: 20px; flex-shrink: 0; object-fit: cover; background: #1b2838; border: 2px solid #000000; }
+            .game-image-placeholder { width: 260px; height: 121px; background: #34495e; border-radius: 12px; margin-right: 20px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: white; font-size: 13px; text-transform: uppercase; border: 2px solid #000000; }
+            
+            .game-info { flex-grow: 1; min-width: 0; }
+            .info-line { background: #f8f9fa; margin: 4px 0; padding: 8px 12px; border-radius: 8px; font-size: 14px; border: 1px solid #eee; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .card-controls { position: absolute; top: 15px; right: 15px; display: flex; gap: 8px; z-index: 10; }
             .edit-btn, .delete-btn { border: none; width: 30px; height: 30px; border-radius: 8px; cursor: pointer; color: white; display: flex; align-items: center; justify-content: center; }
             .edit-btn { background: #3498db; } .delete-btn { background: #e74c3c; }
             #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 100; backdrop-filter: blur(3px); }
@@ -73,29 +134,10 @@ const getTemplate = (games) => {
     <body>
         <h1>Herní Knihovna</h1>
         <div class="controls-bar">
-            <div class="filter-group">
-                <label>Název</label>
-                <input type="text" id="filter-name" placeholder="Zadejte název hry" oninput="applyFilters()">
-            </div>
-            <div class="filter-group">
-                <label>Žánr</label>
-                <select id="filter-genre" onchange="applyFilters()">
-                    <option value="">Všechny žánry</option>
-                    <option value="rpg">RPG</option>
-                    <option value="akce">Akce</option>
-                    <option value="strategie">Strategie</option>
-                    <option value="sport">Sport</option>
-                    <option value="sandbox">Sandbox</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label>Rok vydání</label>
-                <input type="number" id="filter-year" placeholder="Zadejte rok vydání" oninput="applyFilters()">
-            </div>
-            <div class="filter-group">
-                <label>Max. cena: <span id="price-val">5000</span> Kč</label>
-                <input type="range" id="filter-price" min="0" max="5000" step="100" value="5000" oninput="applyFilters()">
-            </div>
+            <div class="filter-group"><label>Název</label><input type="text" id="filter-name" placeholder="Zadejte název hry" oninput="applyFilters()"></div>
+            <div class="filter-group"><label>Žánr</label><select id="filter-genre" onchange="applyFilters()"><option value="">Všechny žánry</option><option value="rpg">RPG</option><option value="akce">Akce</option><option value="strategie">Strategie</option><option value="sport">Sport</option><option value="sandbox">Sandbox</option></select></div>
+            <div class="filter-group"><label>Rok vydání</label><input type="number" id="filter-year" placeholder="Zadejte rok vydání" min="0" oninput="applyFilters()"></div>
+            <div class="filter-group"><label>Max. cena: <span id="price-val">2500</span> Kč</label><input type="range" id="filter-price" min="0" max="2500" step="100" value="2500" oninput="applyFilters()"></div>
         </div>
 
         <div class="grid" id="game-grid">
@@ -112,8 +154,9 @@ const getTemplate = (games) => {
                 <input type="hidden" id="g-id">
                 <input type="text" id="name" placeholder="Název hry">
                 <input type="text" id="genre" placeholder="Žánr (např. RPG)">
-                <input type="number" id="price" placeholder="Cena (Kč)">
-                <input type="number" id="year" placeholder="Rok vydání">
+                <input type="number" id="price" placeholder="Cena (Kč)" min="0">
+                <input type="number" id="year" placeholder="Rok vydání" min="0">
+                <input type="text" id="image" placeholder="URL obrázku (https://...)">
                 <button class="btn-save" onclick="save()">Uložit záznam</button>
                 <button onclick="closeModal()" style="border:none; background:none; cursor:pointer; color:#999;">Zrušit</button>
             </div>
@@ -124,52 +167,66 @@ const getTemplate = (games) => {
                 const nameVal = document.getElementById('filter-name').value.toLowerCase();
                 const genreVal = document.getElementById('filter-genre').value.toLowerCase();
                 const yearVal = document.getElementById('filter-year').value;
-                const priceVal = document.getElementById('filter-price').value;
+                const priceInput = document.getElementById('filter-price');
+                const priceVal = priceInput.value;
                 
+                const percentage = (priceVal / priceInput.max) * 100;
+                priceInput.style.background = \`linear-gradient(to right, #00bcd4 \${percentage}%, #333 \${percentage}%)\`;
                 document.getElementById('price-val').innerText = priceVal;
-
-                const cards = document.querySelectorAll('.game-card:not(.add)');
                 
-                cards.forEach(card => {
+                document.querySelectorAll('.game-card:not(.add)').forEach(card => {
                     const matchesName = card.dataset.name.includes(nameVal);
                     const matchesGenre = genreVal === "" || card.dataset.genre === genreVal;
                     const matchesYear = yearVal === "" || card.dataset.year === yearVal;
                     const matchesPrice = Number(card.dataset.price) <= Number(priceVal);
-
                     card.style.display = (matchesName && matchesGenre && matchesYear && matchesPrice) ? "flex" : "none";
                 });
             }
+            window.onload = applyFilters;
 
             function openModal(g = {}) {
                 document.getElementById('m-title').innerText = g.id ? 'Upravit hru' : 'Nová hra';
                 document.getElementById('g-id').value = g.id || '';
                 document.getElementById('name').value = g.name || '';
                 document.getElementById('genre').value = g.genre || '';
-                document.getElementById('price').value = g.price || '';
+                document.getElementById('price').value = g.price !== undefined ? g.price : '';
                 document.getElementById('year').value = g.year || '';
+                document.getElementById('image').value = g.image || '';
                 document.getElementById('modal').style.display = 'flex';
             }
-
             function closeModal() { document.getElementById('modal').style.display = 'none'; }
-
+            
             async function save() {
                 const id = document.getElementById('g-id').value;
+                const priceStr = document.getElementById('price').value;
+                const yearStr = document.getElementById('year').value;
+                
                 const body = {
                     name: document.getElementById('name').value,
                     genre: document.getElementById('genre').value,
-                    price: Number(document.getElementById('price').value),
-                    year: Number(document.getElementById('year').value)
+                    price: Number(priceStr),
+                    year: Number(yearStr),
+                    image: document.getElementById('image').value
                 };
-                if(!body.name || !body.genre) return alert('Vyplňte prosím název a žánr!');
-                const url = id ? '/items/' + id : '/items';
-                const method = id ? 'PUT' : 'POST';
-                await fetch(url, { method, body: JSON.stringify(body) });
+                
+                // Kontrola, jestli jsou všechna pole vyplněna
+                if(!body.name || !body.genre || priceStr === "" || yearStr === "") {
+                    return alert('Vyplňte prosím všechna pole (Název, Žánr, Cena, Rok)!');
+                }
+                
+                // Kontrola záporných hodnot
+                if(body.price < 0 || body.year < 0) {
+                    return alert('Cena a rok nesmí být v mínusu!');
+                }
+                
+                const url = id ? '/edit/' + id : '/items';
+                await fetch(url, { method: 'POST', body: JSON.stringify(body) });
                 location.reload();
             }
-
+            
             async function del(id) {
                 if(confirm('Opravdu chcete tuto hru odstranit?')) {
-                    await fetch('/items/' + id, { method: 'DELETE' });
+                    await fetch('/delete/' + id, { method: 'DELETE' });
                     location.reload();
                 }
             }
@@ -181,38 +238,72 @@ const getTemplate = (games) => {
 // --- HLAVNÍ SERVEROVÝ CYKLUS ---
 const server = http.createServer((req, res) => {
     let games = read();
-
+    
+    // 1. Zobrazení hlavní stránky
     if (req.url === "/" || (req.url === "/items" && req.method === "GET")) {
         res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
         return res.end(getTemplate(games));
     }
 
-    if (req.url.startsWith("/items")) {
+    // 2. Zobrazení detailu hry
+    if (req.url.startsWith("/item?id=") && req.method === "GET") {
+        const id = req.url.split("=")[1];
+        const game = games.find(g => g.id == id);
+        if (game) {
+            res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+            return res.end(getDetailTemplate(game));
+        }
+    }
+
+    // 3. Vytvoření nového záznamu hry
+    if (req.url === "/items" && req.method === "POST") {
         let body = "";
         req.on("data", chunk => body += chunk);
         req.on("end", () => {
-            const id = req.url.split("/")[2];
-
-            if (req.method === "POST") {
-                const newItem = JSON.parse(body);
-                newItem.id = Date.now();
-                games.push(newItem);
-            } 
-            else if (req.method === "PUT" && id) {
-                const idx = games.findIndex(g => g.id == id);
-                if (idx !== -1) games[idx] = { ...JSON.parse(body), id: Number(id) };
-            } 
-            else if (req.method === "DELETE" && id) {
-                games = games.filter(g => g.id != id);
+            const newItem = JSON.parse(body);
+            if (!validateData(newItem)) {
+                res.writeHead(400); return res.end("Neplatná data");
             }
-
+            newItem.id = games.length > 0 ? Math.max(...games.map(g => Number(g.id))) + 1 : 1;
+            games.push(newItem);
             write(games);
-            res.writeHead(200);
-            res.end();
+            res.writeHead(200); res.end();
         });
+        return;
     }
+
+    // 4. Uložení úprav hry
+    if (req.url.startsWith("/edit/") && req.method === "POST") {
+        const id = req.url.split("/")[2];
+        let body = "";
+        req.on("data", chunk => body += chunk);
+        req.on("end", () => {
+            const updatedItem = JSON.parse(body);
+            if (!validateData(updatedItem)) {
+                res.writeHead(400); return res.end("Neplatná data");
+            }
+            const idx = games.findIndex(g => g.id == id);
+            if (idx !== -1) games[idx] = { ...updatedItem, id: Number(id) };
+            write(games);
+            res.writeHead(200); res.end();
+        });
+        return;
+    }
+
+    // 5. Smazání záznamu
+    if (req.url.startsWith("/delete/") && req.method === "DELETE") {
+        const id = req.url.split("/")[2];
+        games = games.filter(g => g.id != id);
+        write(games);
+        res.writeHead(200); res.end();
+        return;
+    }
+    
+    // Pokud adresa neexistuje
+    res.writeHead(404);
+    res.end();
 });
 
 server.listen(3001, () => {
-    console.log("Server Aliance běží na http://localhost:3001");
+    console.log("Server běží na http://localhost:3001");
 });

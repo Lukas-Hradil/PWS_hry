@@ -3,7 +3,7 @@ const fs = require("fs");
 
 const DB = "data.json";
 
-// --- POMOCNÉ FUNKCE PRO PRÁCI S DATY ---
+// --- práce s databazi ---
 const read = () => {
     try {
         if (!fs.existsSync(DB)) return [];
@@ -23,9 +23,8 @@ const write = (data) => {
     }
 };
 
-// --- ZJEDNODUŠENÁ VALIDACE NA STRANĚ SERVERU ---
+// --- kontrola dat---
 const validateData = (data) => {
-    // Kontroluje, jestli nejsou texty prázdné a jestli jsou čísla >= 0
     if (!data.name || data.name.trim() === "") return false;
     if (!data.genre || data.genre.trim() === "") return false;
     if (typeof data.price !== "number" || data.price < 0) return false;
@@ -33,7 +32,185 @@ const validateData = (data) => {
     return true;
 };
 
-// --- ŠABLONA PRO DETAIL ZÁZNAMU ---
+// --- CSS ---
+const cssStyles = `
+    body { 
+        font-family: 'Segoe UI', sans-serif; 
+        background: #f0f2f5; 
+        color: #333; 
+        margin: 0; 
+        padding: 40px; 
+        display: flex; 
+        flex-direction: column; 
+        align-items: center; 
+        min-height: 100vh; 
+    }
+    h1 { margin-bottom: 20px; }
+    
+    .controls-bar { 
+        background: white; 
+        padding: 20px; 
+        border-radius: 15px; 
+        margin-bottom: 30px; 
+        display: flex; 
+        flex-wrap: wrap; 
+        gap: 15px; 
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+        align-items: center; 
+        justify-content: center; 
+    }
+    .filter-group { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: #666; width: 200px; }
+    input, select { padding: 10px; border-radius: 8px; border: 1px solid #ddd; outline: none; }
+    
+    #filter-price { 
+        -webkit-appearance: none; 
+        width: 100%; 
+        height: 8px; 
+        background: #333; 
+        border-radius: 5px; 
+        outline: none; 
+        margin: 10px 0; 
+        padding: 0; 
+    }
+    #filter-price::-webkit-slider-thumb { 
+        -webkit-appearance: none; 
+        appearance: none; 
+        width: 18px; 
+        height: 18px; 
+        background: #14b2c7; 
+        border-radius: 50%; 
+        cursor: pointer; 
+        border: none; 
+    }
+    
+    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 25px; max-width: 1200px; }
+    .game-card { 
+        background: #fff; 
+        border-radius: 20px; 
+        padding: 20px; 
+        display: flex; 
+        align-items: center; 
+        position: relative; 
+        width: 560px; 
+        min-height: 220px; 
+        box-sizing: border-box; 
+        box-shadow: 0 10px 20px rgba(0,0,0,0.05); 
+        transition: transform 0.2s; 
+        overflow: hidden; 
+    }
+    .game-card:hover { transform: translateY(-5px); }
+    .add { border: 3px dashed #bbb; cursor: pointer; justify-content: center; flex-direction: column; background: #fafafa; text-align: center; }
+    .add:hover { background: #f0f0f0; }
+    
+    .game-image { 
+        width: 260px; 
+        height: 121px; 
+        border-radius: 12px; 
+        margin-right: 20px; 
+        flex-shrink: 0; 
+        object-fit: cover; 
+        background: #1b2838; 
+        border: 2px solid #000000; 
+    }
+    .game-image-placeholder { 
+        width: 260px; 
+        height: 121px; 
+        background: #34495e; 
+        border-radius: 12px; 
+        margin-right: 20px; 
+        flex-shrink: 0; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        color: white; 
+        font-size: 13px; 
+        text-transform: uppercase; 
+        border: 2px solid #000000; 
+    }
+    
+    .game-info { flex-grow: 1; min-width: 0; }
+    .info-line { 
+        background: #f8f9fa; 
+        margin: 4px 0; 
+        padding: 8px 12px; 
+        border-radius: 8px; 
+        font-size: 14px; 
+        border: 1px solid #eee; 
+        white-space: nowrap; 
+        overflow: hidden; 
+        text-overflow: ellipsis; 
+    }
+    
+    .card-controls { position: absolute; top: 15px; right: 15px; display: flex; gap: 8px; z-index: 10; }
+    .edit-btn, .delete-btn { 
+        border: none; 
+        width: 30px; 
+        height: 30px; 
+        border-radius: 8px; 
+        cursor: pointer; 
+        color: white; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+    }
+    .edit-btn { background: #0099ff; } 
+    .delete-btn { background: #b41200; }
+    
+    #modal { 
+        display: none; 
+        position: fixed; 
+        inset: 0; 
+        background: rgba(0,0,0,0.6); 
+        justify-content: center; 
+        align-items: center; 
+        z-index: 100; 
+        backdrop-filter: blur(3px); 
+    }
+    .modal-content { 
+        background: white; 
+        padding: 30px; 
+        border-radius: 20px; 
+        display: flex; 
+        flex-direction: column; 
+        gap: 12px; 
+        width: 320px; 
+    }
+    .btn-save { 
+        background: #09c658; 
+        color: white; 
+        padding: 12px; 
+        border: none; 
+        border-radius: 10px; 
+        cursor: pointer; 
+        font-weight: bold; 
+        margin-top: 10px; 
+    }
+
+    .detail-body { justify-content: center; }
+    .detail-box { 
+        background: white; 
+        padding: 40px; 
+        border-radius: 20px; 
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
+        max-width: 600px; 
+        width: 90%; 
+        text-align: center; 
+    }
+    .detail-box img { width: 100%; border-radius: 15px; border: 2px solid #000; margin-bottom: 20px; }
+    .detail-box .info { text-align: left; background: #f8f9fa; padding: 20px; border-radius: 12px; border: 1px solid #eee; }
+    .back-btn { 
+        display: inline-block; 
+        margin-top: 20px; 
+        padding: 10px 20px; 
+        background: #3498db; 
+        color: white; 
+        text-decoration: none; 
+        border-radius: 8px; 
+        font-weight: bold; 
+    }
+`;
+
+// --- Detail hry ---
 const getDetailTemplate = (g) => `
 <!DOCTYPE html>
 <html lang="cs">
@@ -41,15 +218,9 @@ const getDetailTemplate = (g) => `
     <meta charset="UTF-8">
     <title>Hra: ${g.name}</title>
     <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/686/686589.png" type="image/png">
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .detail-box { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); max-width: 600px; width: 90%; text-align: center; }
-        img { width: 100%; border-radius: 15px; border: 2px solid #000; margin-bottom: 20px; }
-        .info { text-align: left; background: #f8f9fa; padding: 20px; border-radius: 12px; border: 1px solid #eee; }
-        .back-btn { display: inline-block; margin-top: 20px; padding: 10px 20px; background: #3498db; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; }
-    </style>
+    <style>${cssStyles}</style>
 </head>
-<body>
+<body class="detail-body">
     <div class="detail-box">
         <img src="${g.image || ''}" onerror="this.src='https://via.placeholder.com/600x280?text=Logo'">
         <h1>${g.name}</h1>
@@ -59,13 +230,12 @@ const getDetailTemplate = (g) => `
             <p><strong>Cena:</strong> ${g.price} Kč</p>
             <p><strong>Rok vydání:</strong> ${g.year}</p>
         </div>
-        <a href="/" class="back-btn">← Zpět do knihovny</a>
+        <a href="/" class="back-btn">Zpět do knihovny</a>
     </div>
 </body>
 </html>`;
 
-
-// --- HLAVNÍ ŠABLONA ---
+// --- Knihovna her ---
 const getTemplate = (games) => {
     const cards = games.map(g => `
         <div class="game-card" 
@@ -103,41 +273,28 @@ const getTemplate = (games) => {
         <meta charset="UTF-8">
         <title>Knihovna her</title>
         <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/686/686589.png" type="image/png">
-        <style>
-            body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 40px; display: flex; flex-direction: column; align-items: center; color: #333; overflow-y: scroll; }
-            .controls-bar { background: white; padding: 20px; border-radius: 15px; margin-bottom: 30px; display: flex; flex-wrap: wrap; gap: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); align-items: center; justify-content: center; }
-            input, select { padding: 10px; border-radius: 8px; border: 1px solid #ddd; outline: none; }
-            .filter-group { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: #666; width: 200px; }
-            
-            #filter-price { -webkit-appearance: none; width: 100%; height: 8px; background: #333; border-radius: 5px; outline: none; margin: 10px 0; padding: 0; }
-            #filter-price::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; background: #00bcd4; border-radius: 50%; cursor: pointer; border: none; }
-            #filter-price::-moz-range-thumb { width: 18px; height: 18px; background: #00bcd4; border-radius: 50%; cursor: pointer; border: none; }
-
-            .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 25px; max-width: 1200px; }
-            .game-card { background: #fff; border-radius: 20px; padding: 20px; display: flex; align-items: center; position: relative; width: 560px; min-height: 220px; box-sizing: border-box; box-shadow: 0 10px 20px rgba(0,0,0,0.05); transition: transform 0.2s; overflow: hidden; }
-            .game-card:hover { transform: translateY(-5px); }
-            .add { border: 3px dashed #bbb; cursor: pointer; justify-content: center; flex-direction: column; background: #fafafa; text-align: center; }
-            
-            .game-image { width: 260px; height: 121px; border-radius: 12px; margin-right: 20px; flex-shrink: 0; object-fit: cover; background: #1b2838; border: 2px solid #000000; }
-            .game-image-placeholder { width: 260px; height: 121px; background: #34495e; border-radius: 12px; margin-right: 20px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: white; font-size: 13px; text-transform: uppercase; border: 2px solid #000000; }
-            
-            .game-info { flex-grow: 1; min-width: 0; }
-            .info-line { background: #f8f9fa; margin: 4px 0; padding: 8px 12px; border-radius: 8px; font-size: 14px; border: 1px solid #eee; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-            .card-controls { position: absolute; top: 15px; right: 15px; display: flex; gap: 8px; z-index: 10; }
-            .edit-btn, .delete-btn { border: none; width: 30px; height: 30px; border-radius: 8px; cursor: pointer; color: white; display: flex; align-items: center; justify-content: center; }
-            .edit-btn { background: #3498db; } .delete-btn { background: #e74c3c; }
-            #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 100; backdrop-filter: blur(3px); }
-            .modal-content { background: white; padding: 30px; border-radius: 20px; display: flex; flex-direction: column; gap: 12px; width: 320px; }
-            .btn-save { background: #2ecc71; color: white; padding: 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; margin-top: 10px; }
-        </style>
+        <style>${cssStyles}</style>
     </head>
     <body>
         <h1>Herní Knihovna</h1>
         <div class="controls-bar">
             <div class="filter-group"><label>Název</label><input type="text" id="filter-name" placeholder="Zadejte název hry" oninput="applyFilters()"></div>
-            <div class="filter-group"><label>Žánr</label><select id="filter-genre" onchange="applyFilters()"><option value="">Všechny žánry</option><option value="rpg">RPG</option><option value="akce">Akce</option><option value="strategie">Strategie</option><option value="sport">Sport</option><option value="sandbox">Sandbox</option></select></div>
+            <div class="filter-group">
+                <label>Žánr</label>
+                <select id="filter-genre" onchange="applyFilters()">
+                    <option value="">Všechny žánry</option>
+                    <option value="rpg">RPG</option>
+                    <option value="akce">Akce</option>
+                    <option value="strategie">Strategie</option>
+                    <option value="sport">Sport</option>
+                    <option value="sandbox">Sandbox</option>
+                </select>
+            </div>
             <div class="filter-group"><label>Rok vydání</label><input type="number" id="filter-year" placeholder="Zadejte rok vydání" min="0" oninput="applyFilters()"></div>
-            <div class="filter-group"><label>Max. cena: <span id="price-val">2500</span> Kč</label><input type="range" id="filter-price" min="0" max="2500" step="100" value="2500" oninput="applyFilters()"></div>
+            <div class="filter-group">
+                <label>Max. cena: <span id="price-val">2500</span> Kč</label>
+                <input type="range" id="filter-price" min="0" max="2500" step="100" value="2500" oninput="applyFilters()">
+            </div>
         </div>
 
         <div class="grid" id="game-grid">
@@ -179,9 +336,11 @@ const getTemplate = (games) => {
                     const matchesGenre = genreVal === "" || card.dataset.genre === genreVal;
                     const matchesYear = yearVal === "" || card.dataset.year === yearVal;
                     const matchesPrice = Number(card.dataset.price) <= Number(priceVal);
+                    
                     card.style.display = (matchesName && matchesGenre && matchesYear && matchesPrice) ? "flex" : "none";
                 });
             }
+            
             window.onload = applyFilters;
 
             function openModal(g = {}) {
@@ -192,9 +351,13 @@ const getTemplate = (games) => {
                 document.getElementById('price').value = g.price !== undefined ? g.price : '';
                 document.getElementById('year').value = g.year || '';
                 document.getElementById('image').value = g.image || '';
+                
                 document.getElementById('modal').style.display = 'flex';
             }
-            function closeModal() { document.getElementById('modal').style.display = 'none'; }
+            
+            function closeModal() { 
+                document.getElementById('modal').style.display = 'none'; 
+            }
             
             async function save() {
                 const id = document.getElementById('g-id').value;
@@ -235,17 +398,17 @@ const getTemplate = (games) => {
     </html>`;
 };
 
-// --- HLAVNÍ SERVEROVÝ CYKLUS ---
+// --- Server ---
 const server = http.createServer((req, res) => {
     let games = read();
     
-    // 1. Zobrazení hlavní stránky
+    // Zobrazení hlavní stránky
     if (req.url === "/" || (req.url === "/items" && req.method === "GET")) {
         res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
         return res.end(getTemplate(games));
     }
 
-    // 2. Zobrazení detailu hry
+    // Zobrazení detailu hry
     if (req.url.startsWith("/item?id=") && req.method === "GET") {
         const id = req.url.split("=")[1];
         const game = games.find(g => g.id == id);
@@ -255,7 +418,7 @@ const server = http.createServer((req, res) => {
         }
     }
 
-    // 3. Vytvoření nového záznamu hry
+    // Vytvoření nové hry
     if (req.url === "/items" && req.method === "POST") {
         let body = "";
         req.on("data", chunk => body += chunk);
@@ -272,7 +435,7 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    // 4. Uložení úprav hry
+    // Uložení úprav hry
     if (req.url.startsWith("/edit/") && req.method === "POST") {
         const id = req.url.split("/")[2];
         let body = "";
@@ -290,7 +453,7 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    // 5. Smazání záznamu
+    // Smazání hry
     if (req.url.startsWith("/delete/") && req.method === "DELETE") {
         const id = req.url.split("/")[2];
         games = games.filter(g => g.id != id);
